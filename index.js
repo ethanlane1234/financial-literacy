@@ -36,25 +36,49 @@ setInterval(() => {
 
 // THIS IS THE SOCKET
 io.on("connection", (socket) => {
-  console.log("Player connected:", socket.id);
+  console.log("A user connected:", socket.id);
 
-  // register player
-  socket.on("register", (player) => {
-    players[socket.id] = 
-    { 
-        player,
-        netWorth: 10000 
-    };
+  // Create a new player
+  players[socket.id] = {
+    cash: 500,
+    bank: 0,
+    income: 100,    // paycheck per round
+    expenses: 50,   // rent/expenses per round
+    stocks: { stock1: 0, stock2: 0 }
+  };
+
+  // Send all players to everyone
+  io.emit("players", players);
+
+  // Handle income
+  socket.on("collectIncome", () => {
+    players[socket.id].cash += players[socket.id].income;
+    io.emit("players", players);
   });
 
-  // update player networth
-  socket.on("updateNetWorth", (netWorth) => {
-    if (players[socket.id]) players[socket.id].netWorth = netWorth;
+  // Handle expenses
+  socket.on("payExpenses", () => {
+    const player = players[socket.id];
+    if (player.cash >= player.expenses) {
+      player.cash -= player.expenses;
+      io.emit("players", players);
+    }
   });
 
-  // disconnect
+  // Buy stock (simple)
+  socket.on("buyStock", (stock) => {
+    const player = players[socket.id];
+    if (player.cash >= 100) {
+      player.cash -= 100;
+      player.stocks[stock]++;
+      io.emit("players", players);
+    }
+  });
+
+  // Disconnect
   socket.on("disconnect", () => {
-    console.log("Player disconnected:", socket.id);
+    delete players[socket.id];
+    io.emit("players", players);
   });
 });
 
