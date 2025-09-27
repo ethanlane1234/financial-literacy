@@ -1,10 +1,48 @@
-express = require('express');
-app = express();
-path = require('path');
-PORT = 3000;
+const express = require('express');
+const { createServer } = require('http');
+const socketIo = require('socket.io');
+const path = require('path');
 
-app.use(express.static(path.join(__dirname, 'public')))
+const app = express();
+app.use(express.static(path.join(__dirname, 'public'))); // public folder
 
-app.listen(PORT, () => {
+// SERVER SIDE LOGIC
+
+const PORT = 3000;
+
+const playerStats = 
+{
+    cash: 0,
+    bank: 0,
+    stock1: 0,
+    stock2: 0,
+    stock3: 0,
+    stock4: 0,
+    stock5: 0,
+};
+let players = 
+[
+    playerStats
+];
+
+// SOCKET.IO
+const server = createServer(app);
+const io = socketIo(server);
+
+io.on('connection', (socket) => {
+    console.log('A user connected');
+
+    socket.on('chat message', (msg) => {
+        console.log('message: ' + msg);
+        io.emit('chat message', msg); // Emit the message to all connected clients
+    });
+
+    // Handle disconnections
+    socket.on('disconnect', () => {
+        console.log('User disconnected');
+    });
+});
+
+server.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 })
