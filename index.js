@@ -31,16 +31,6 @@ const io = socketIo(server);
 
 io.on('connection', (socket) => {
     console.log('A user connected');
-
-    socket.on('chat message', (msg) => {
-        console.log('message: ' + msg);
-        io.emit('chat message', msg); // Emit the message to all connected clients
-    });
-
-    // Handle disconnections
-    socket.on('disconnect', () => {
-        console.log('User disconnected');
-    });
 });
 
 server.listen(PORT, () => {
