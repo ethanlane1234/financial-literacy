@@ -1,14 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
 
 
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="style.css">
-  <script src="script.js" defer></script>
   <title>Account Growth by Month</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="/socket.io/socket.io.js"></script>  
   <style>
     body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }
     .form { margin-bottom: 20px; }
@@ -16,38 +13,23 @@
     input { padding: 6px; width: 200px; }
     button { margin-top: 15px; padding: 8px 14px; border:none; background:#4f46e5; color:#fff; border-radius:6px; cursor:pointer; }
     canvas { background: #fff; border-radius: 10px; padding: 10px; }
+    
   </style>
 </head>
-
-
-<body>
-
-<label for="username">Username:</label>
-<input type="text" id="username" name="username" placeholder="Enter your name">
-
-<label for="password">Password:</label>
-<input type="password" id="password" name="password">
-
-
 <body>
   <h2>Account Growth Tracker</h2>
 
   <div class="form">
-    <label for="year">Year:</label>
-    <input type="number" id="year" value="2025" min="2000" max="2100">
 
-    <label for="amount">Dollar Amount ($):</label>
-    <input type="number" id="amount" placeholder="Enter monthly amount">
 
-    <button onclick="addData()">Add Month Data</button>
-    <button onclick="resetData()" style="background:#555;">Reset</button>
+    
+    <input type="number" id="amount" placeholder="Dollar amount ($)">
+
+    <button onclick="deposit()">deposit</button>
+    <button onclick="withdraw()">withdraw</button>
+    <button onclick="buy ()" >buy</button>
+    <button onclick="sell ()" >sell</button>
   </div>
-  <h2>Actions</h2>
-<button onclick="socket.emit('collectIncome')">Collect Paycheck (+$100)</button>
-<button onclick="socket.emit('payExpenses')">Pay Expenses (-$50)</button>
-<button onclick="socket.emit('buyStock', 'stock1')">Buy Stock 1 ($100)</button>
-<button onclick="socket.emit('buyStock', 'stock2')">Buy Stock 2 ($100)</button>
-
 
   <canvas id="growthChart" width="700" height="350"></canvas>
 
@@ -57,7 +39,7 @@
       "July","August","September","October","November","December"
     ];
 
-    let currentIndex = 0; // track which month we’re on
+    let currentIndex = 0; 
     let chart;
 
     const ctx = document.getElementById("growthChart").getContext("2d");
@@ -85,28 +67,6 @@
       }
     });
 
-    function addData() {
-      const year = document.getElementById("year").value;
-      const amount = parseFloat(document.getElementById("amount").value);
-
-      if (isNaN(amount)) {
-        alert("Please enter a valid dollar amount.");
-        return;
-      }
-
-      if (currentIndex >= months.length) {
-        alert("All 12 months have been filled for " + year + ".");
-        return;
-      }
-
-      // Add month and amount to chart
-      chart.data.labels.push(months[currentIndex] + " " + year);
-      chart.data.datasets[0].data.push(amount);
-      chart.update();
-
-      currentIndex++; // move to next month
-      document.getElementById("amount").value = ""; // clear input
-    }
 
     function resetData() {
       chart.data.labels = [];
@@ -147,4 +107,3 @@
 
 
 </body>
-</html>
