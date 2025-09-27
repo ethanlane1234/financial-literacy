@@ -1,5 +1,5 @@
 const express = require('express');
-const { createServer } = require('http');
+const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
 
@@ -26,13 +26,39 @@ let players =
 ];
 
 // SOCKET.IO
-const server = createServer(app);
+const server = http.createServer(app);
 const io = socketIo(server);
 
-io.on('connection', (socket) => {
-    console.log('A user connected');
+setInterval(() => {
+  const leaderboard = Object.values(players).sort((a, b) => b.netWorth - a.netWorth);
+  io.emit("leaderboard", leaderboard);
+}, 2000);
+
+// THIS IS THE SOCKET
+io.on("connection", (socket) => {
+  console.log("Player connected:", socket.id);
+
+  // register player
+  socket.on("register", (player) => {
+    players[socket.id] = 
+    { 
+        player,
+        netWorth: 10000 
+    };
+  });
+
+  // update player networth
+  socket.on("updateNetWorth", (netWorth) => {
+    if (players[socket.id]) players[socket.id].netWorth = netWorth;
+  });
+
+  // disconnect
+  socket.on("disconnect", () => {
+    console.log("Player disconnected:", socket.id);
+  });
 });
 
+// RUN SERVER
 server.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 })
