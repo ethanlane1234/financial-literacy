@@ -9,6 +9,17 @@ let history = [];
 let chart;
 let progress = 0;
 
+function fmt(x) {
+   return "$" + x.toFixed(2);
+}
+function rnd(min, max) { 
+  return Math.random() * (max - min) + min; 
+}
+function gaussian() {
+  let u1 = Math.random(), u2 = Math.random();
+  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+
 function render() {
   document.getElementById("year").innerText = "Year: " + year;
   document.getElementById("month").innerText = "Month: " + (month + 1);
@@ -122,5 +133,45 @@ function withdraw() {
   let take = Math.min(amt, bank.balance);
   bank.balance -= take;
   player.cash += take;
+  render();
+}
+function updateIndex() {
+  let avg = stocks.reduce((s, st) => s + st.price, 0) / stocks.length;
+  indexFund.nav = avg;
+}
+
+function netWorth() {
+  let nw = player.cash + bank.balance + player.indexInvestment;
+  for (let s of stocks) {
+    nw += (player.stockPositions[s.name] || 0) * s.price;
+  }
+  return nw;
+}
+
+function nextMonth() {
+  month++;
+  if (month >= 12) {
+    month = 0;
+    year++;
+    player.cash += 5000;
+  }
+
+  for (let s of stocks) {
+    let shock = gaussian() * s.vol;
+    s.price = Math.max(1, s.price * Math.exp(s.drift + shock));
+  }
+
+  bank.balance *= (1 + bank.rate / 12);
+
+  // index update
+  updateIndex();
+  // index investments grow
+  player.indexInvestment *= (1 + 0.005); // ~6% annualized
+
+  history.push({ t: year * 12 + month, value: netWorth() });
+
+  // report to server
+  socket.emit("updateNetWorth", netWorth());
+
   render();
 }
