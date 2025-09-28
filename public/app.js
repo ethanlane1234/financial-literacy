@@ -175,3 +175,22 @@ function nextMonth() {
 
   render();
 }
+
+function initGame() {
+  year = 0; month = 0;
+  player = { cash: 10000, stockPositions: {}, indexInvestment: 0 };
+  bank = { balance: 0, rate: 0.02 };
+  stocks = [];
+  for (let i = 0; i < 5; i++) {
+    stocks.push({
+      name: "STK" + String.fromCharCode(65 + i),
+      price: rnd(50, 150),
+      drift: rnd(-0.01, 0.05),
+      vol: rnd(0.02, 0.1)
+    });
+  }
+  updateIndex();
+  history = [];
+  progress = 0;
+  render();
+}
