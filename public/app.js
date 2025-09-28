@@ -35,6 +35,22 @@ function render() {
       </div>
     `;
   }
+
+  // chart
+  if (!chart) {
+    chart = new Chart(document.getElementById("chart"), {
+      type: "line",
+      data: { labels: [], datasets: [{ label: "Net Worth", data: [] }] },
+      options: { responsive: true }
+    });
+  }
+  chart.data.labels = history.map(h => h.t);
+  chart.data.datasets[0].data = history.map(h => h.value);
+  chart.update();
+
+  // progress bar
+  progress = (month / 12) * 100;
+  document.getElementById("progress").style.width = progress + "%";
 }
 
 function joinGame() {
@@ -57,4 +73,54 @@ function joinGame() {
 
   // start timer → 1 month every 2s
   setInterval(nextMonth, 2000);
+}
+
+function buyStock(name) {
+  let amt = parseFloat(document.getElementById("amt_" + name).value);
+  let stock = stocks.find(s => s.name === name);
+  if (amt > 0 && amt <= player.cash) {
+    let shares = amt / stock.price;
+    player.stockPositions[name] = (player.stockPositions[name] || 0) + shares;
+    player.cash -= amt;
+    render();
+  }
+}
+function sellStock(name) {
+  let shares = parseFloat(document.getElementById("sell_" + name).value);
+  let stock = stocks.find(s => s.name === name);
+  let owned = player.stockPositions[name] || 0;
+  let sAmt = Math.min(shares, owned);
+  player.cash += sAmt * stock.price;
+  player.stockPositions[name] = owned - sAmt;
+  render();
+}
+function investIndex() {
+  let amt = parseFloat(document.getElementById("indexAmount").value);
+  if (amt > 0 && amt <= player.cash) {
+    player.indexInvestment += amt;
+    player.cash -= amt;
+    render();
+  }
+}
+function sellIndex() {
+  let amt = parseFloat(document.getElementById("indexAmount").value);
+  let take = Math.min(amt, player.indexInvestment);
+  player.indexInvestment -= take;
+  player.cash += take;
+  render();
+}
+function deposit() {
+  let amt = parseFloat(document.getElementById("bankAmount").value);
+  if (amt > 0 && amt <= player.cash) {
+    player.cash -= amt;
+    bank.balance += amt;
+    render();
+  }
+}
+function withdraw() {
+  let amt = parseFloat(document.getElementById("bankAmount").value);
+  let take = Math.min(amt, bank.balance);
+  bank.balance -= take;
+  player.cash += take;
+  render();
 }
