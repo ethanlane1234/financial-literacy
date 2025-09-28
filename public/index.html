@@ -1,86 +1,81 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Economic Simulation</title>
+  <meta charset="UTF-8" />
+  <title>Financial Literacy Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="/socket.io/socket.io.js"></script>
+
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
 </head>
 <body class="bg-gray-100 text-gray-900">
-  <div id="app" class="max-w-6xl mx-auto p-6">
-    <h1 class="text-3xl font-bold mb-4">Economic Game</h1>
+  <div class="max-w-6xl mx-auto p-6">
+    <h1 class="text-3xl font-bold mb-4">Financial Literacy Game</h1>
 
-    <!-- Player setup -->
-    <div id="setup">
-      <input id="playerName" type="text" placeholder="Enter name"
-             class="border px-2 py-1">
-      <button onclick="joinGame()" class="px-3 py-1 bg-blue-500 text-white rounded">
+    <!-- Setup -->
+    <div id="setup" class="space-x-2">
+      <input id="playerName" type="text" placeholder="Enter your name"
+             class="border px-3 py-2 rounded" />
+      <button onclick="joinGame()" class="px-4 py-2 bg-blue-600 text-white rounded">
         Join Game
       </button>
     </div>
 
-    <!-- Game UI -->
+    <!-- Game -->
     <div id="game" class="hidden">
-      <div class="grid grid-cols-3 gap-6">
-        <!-- Info -->
-        <div>
-          <h2 class="text-xl font-semibold">Player Info</h2>
-          <p id="year"></p>
-          <p id="month"></p>
-          <p id="cash"></p>
-          <p id="bank"></p>
-          <p id="index"></p>
-          <p id="networth"></p>
-        </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Stats -->
+        <div class="md:col-span-2 space-y-2">
+          <div id="year" class="text-sm"></div>
+          <div id="month" class="text-sm"></div>
+          <div id="cash" class="text-sm"></div>
+          <div id="bank" class="text-sm"></div>
+          <div id="index" class="text-sm"></div>
+          <div id="networth" class="font-semibold"></div>
+          <div class="w-full bg-gray-300 h-2 rounded mt-2">
+            <div id="progress" class="h-2 bg-blue-500 rounded" style="width:0%"></div>
+          </div>
 
-        <!-- Investments -->
-        <div>
-          <h2 class="text-xl font-semibold">Investments</h2>
+          <!-- Stocks list -->
+          <h2 class="text-xl font-semibold mt-4">Stocks</h2>
           <div id="stocks"></div>
 
-          <div class="mt-4">
-            <h3 class="text-lg font-semibold">Index Fund</h3>
-            <div class="flex space-x-2 mt-2">
-              <input id="indexAmount" type="number" placeholder="Amount $" class="border px-2 py-1">
-              <button onclick="investIndex()" class="px-2 py-1 bg-green-500 text-white rounded">Invest</button>
-              <button onclick="sellIndex()" class="px-2 py-1 bg-yellow-500 text-black rounded">Sell</button>
+          <!-- Index & Bank actions -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div>
+              <h3 class="text-lg font-semibold">Index Fund</h3>
+              <div class="flex gap-2 mt-2">
+                <input id="indexAmount" type="number" placeholder="Amount $" class="border px-2 py-1">
+                <button onclick="investIndex()" class="px-2 py-1 bg-green-600 text-white rounded">Invest</button>
+                <button onclick="sellIndex()" class="px-2 py-1 bg-yellow-400 text-black rounded">Sell</button>
+              </div>
+            </div>
+            <div>
+              <h3 class="text-lg font-semibold">Bank</h3>
+              <div class="flex gap-2 mt-2">
+                <input id="bankAmount" type="number" placeholder="Amount $" class="border px-2 py-1">
+                <button onclick="deposit()" class="px-2 py-1 bg-green-600 text-white rounded">Deposit</button>
+                <button onclick="withdraw()" class="px-2 py-1 bg-yellow-400 text-black rounded">Withdraw</button>
+              </div>
             </div>
           </div>
 
-          <div class="mt-4">
-            <h3 class="text-lg font-semibold">Bank</h3>
-            <div class="flex space-x-2 mt-2">
-              <input id="bankAmount" type="number" placeholder="Amount $" class="border px-2 py-1">
-              <button onclick="deposit()" class="px-2 py-1 bg-green-500 text-white rounded">Deposit</button>
-              <button onclick="withdraw()" class="px-2 py-1 bg-yellow-500 text-black rounded">Withdraw</button>
-            </div>
+          <!-- Chart -->
+          <div class="mt-6">
+            <canvas id="chart" height="100"></canvas>
           </div>
         </div>
 
         <!-- Leaderboard -->
         <div>
           <h2 class="text-xl font-semibold">Leaderboard</h2>
-          <ul id="leaderboard" class="mt-2 space-y-1"></ul>
+          <ul id="leaderboard" class="list-disc pl-6 mt-2"></ul>
         </div>
-      </div>
-
-      <!-- Progress Bar -->
-      <div class="mt-8">
-        <h2 class="text-xl font-semibold">Year Progress</h2>
-        <div class="w-full bg-gray-300 rounded h-6 mt-2">
-          <div id="progress" class="bg-blue-500 h-6 rounded"></div>
-        </div>
-      </div>
-
-      <!-- Net Worth Chart -->
-      <div class="mt-8">
-        <h2 class="text-xl font-semibold">Net Worth Over Time</h2>
-        <canvas id="chart"></canvas>
       </div>
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <script src="./app.js"></script>
 </body>
 </html>

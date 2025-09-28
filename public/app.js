@@ -1,23 +1,21 @@
+// app.js
 let socket;
-let player_name;
 let year = 0, month = 0;
 let player = { cash: 10000, stockPositions: {}, indexInvestment: 0 };
 let bank = { balance: 0, rate: 0.02 };
-let stocks = [];
+
+// Pick your real tickers here
+const TICKERS = ["AAPL", "MSFT", "AMZN", "GOOGL", "TSLA"];
+
+let stocks = [];           // [{ name, price, currency }]
 let indexFund = { nav: 0 };
 let history = [];
 let chart;
-let progress = 0;
 
 function fmt(x) {
-   return "$" + x.toFixed(2);
-}
-function rnd(min, max) { 
-  return Math.random() * (max - min) + min; 
-}
-function gaussian() {
-  let u1 = Math.random(), u2 = Math.random();
-  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+  const n = Number(x);
+  if (!Number.isFinite(n)) return "$0.00";
+  return "$" + n.toFixed(2);
 }
 
 function render() {
@@ -29,84 +27,105 @@ function render() {
     `Index NAV: ${fmt(indexFund.nav)} | Investment: ${fmt(player.indexInvestment)}`;
   document.getElementById("networth").innerText = "Net Worth: " + fmt(netWorth());
 
-  // stocks UI
-  let sDiv = document.getElementById("stocks");
+  // Stocks UI
+  const sDiv = document.getElementById("stocks");
   sDiv.innerHTML = "";
-  for (let s of stocks) {
-    let owned = player.stockPositions[s.name] || 0;
+  for (const s of stocks) {
+    const owned = player.stockPositions[s.name] || 0;
     sDiv.innerHTML += `
-      <div class="border p-2 mb-2 rounded bg-white shadow">
-        <strong>${s.name}</strong> Price: ${fmt(s.price)} | Owned: ${owned.toFixed(2)} shares
-        <div class="flex space-x-2 mt-2">
-          <input id="amt_${s.name}" type="number" placeholder="Buy $" class="border px-2 py-1">
-          <button onclick="buyStock('${s.name}')" class="px-2 py-1 bg-green-500 text-white rounded">Buy</button>
-          <input id="sell_${s.name}" type="number" placeholder="Sell shares" class="border px-2 py-1">
-          <button onclick="sellStock('${s.name}')" class="px-2 py-1 bg-yellow-500 text-black rounded">Sell</button>
+      <div class="border p-3 mb-2 rounded bg-white shadow">
+        <div class="flex items-center justify-between">
+          <div class="font-semibold">${s.name}</div>
+          <div>Price: ${fmt(s.price)} <span class="text-gray-500 text-sm">${s.currency || "USD"}</span></div>
         </div>
+        <div class="flex flex-wrap gap-2 mt-2">
+          <input id="amt_${s.name}" type="number" placeholder="Buy $" class="border px-2 py-1">
+          <button onclick="buyStock('${s.name}')" class="px-2 py-1 bg-green-600 text-white rounded">Buy</button>
+          <input id="sell_${s.name}" type="number" placeholder="Sell shares" class="border px-2 py-1">
+          <button onclick="sellStock('${s.name}')" class="px-2 py-1 bg-yellow-400 text-black rounded">Sell</button>
+        </div>
+        <div class="mt-1 text-sm">Owned: ${owned.toFixed(4)} shares</div>
       </div>
     `;
   }
 
-  // chart
+  // Chart
   if (!chart) {
     chart = new Chart(document.getElementById("chart"), {
       type: "line",
       data: { labels: [], datasets: [{ label: "Net Worth", data: [] }] },
-      options: { responsive: true }
+      options: { responsive: true, animation: false }
     });
   }
   chart.data.labels = history.map(h => h.t);
   chart.data.datasets[0].data = history.map(h => h.value);
   chart.update();
 
-  // progress bar
-  progress = (month / 12) * 100;
-  document.getElementById("progress").style.width = progress + "%";
+  // Progress bar (month progress in the year)
+  document.getElementById("progress").style.width = (month / 12) * 100 + "%";
 }
 
 function joinGame() {
-  name = document.getElementById("playerName").value || "Player";
+  const name = document.getElementById("playerName").value || "Player";
   socket = io();
   socket.emit("register", name);
 
+  // Live leaderboard
   socket.on("leaderboard", (data) => {
-    let list = document.getElementById("leaderboard");
+    const list = document.getElementById("leaderboard");
     list.innerHTML = "";
     data.forEach((p, i) => {
       list.innerHTML += `<li>${i + 1}. ${p.name} - ${fmt(p.netWorth)}</li>`;
     });
   });
 
+  // Live price updates
+  socket.on("price", ({ symbol, price, currency }) => {
+    const s = stocks.find(x => x.name === symbol);
+    if (s && typeof price === "number") {
+      s.price = price;
+      s.currency = currency || "USD";
+      updateIndex();
+      render();
+    }
+  });
+
+  // Subscribe to the tickers we care about
+  socket.emit("subscribeTickers", TICKERS);
+
+  // Show game UI
   document.getElementById("setup").classList.add("hidden");
   document.getElementById("game").classList.remove("hidden");
 
   initGame();
 
-  // start timer → 1 month every 2s
-  setInterval(nextMonth, 2000);
+  // Game clock: 1 month every 10 seconds
+  setInterval(nextMonth, 10000);
 }
 
 function buyStock(name) {
-  let amt = parseFloat(document.getElementById("amt_" + name).value);
-  let stock = stocks.find(s => s.name === name);
-  if (amt > 0 && amt <= player.cash) {
-    let shares = amt / stock.price;
-    player.stockPositions[name] = (player.stockPositions[name] || 0) + shares;
-    player.cash -= amt;
-    render();
-  }
+  const amt = parseFloat(document.getElementById("amt_" + name).value);
+  const stock = stocks.find(s => s.name === name);
+  if (!stock || !(amt > 0) || amt > player.cash || !(stock.price > 0)) return;
+  const shares = amt / stock.price;
+  player.stockPositions[name] = (player.stockPositions[name] || 0) + shares;
+  player.cash -= amt;
+  render();
 }
+
 function sellStock(name) {
-  let shares = parseFloat(document.getElementById("sell_" + name).value);
-  let stock = stocks.find(s => s.name === name);
-  let owned = player.stockPositions[name] || 0;
-  let sAmt = Math.min(shares, owned);
-  player.cash += sAmt * stock.price;
+  const shares = parseFloat(document.getElementById("sell_" + name).value);
+  const stock = stocks.find(s => s.name === name);
+  if (!stock || !(shares > 0)) return;
+  const owned = player.stockPositions[name] || 0;
+  const sAmt = Math.min(shares, owned);
+  player.cash += sAmt * (stock.price || 0);
   player.stockPositions[name] = owned - sAmt;
   render();
 }
+
 function investIndex() {
-  let amt = parseFloat(document.getElementById("indexAmount").value);
+  const amt = parseFloat(document.getElementById("indexAmount").value);
   if (amt > 0 && amt <= player.cash) {
     player.indexInvestment += amt;
     player.cash -= amt;
@@ -114,14 +133,14 @@ function investIndex() {
   }
 }
 function sellIndex() {
-  let amt = parseFloat(document.getElementById("indexAmount").value);
-  let take = Math.min(amt, player.indexInvestment);
+  const amt = parseFloat(document.getElementById("indexAmount").value);
+  const take = Math.min(amt, player.indexInvestment);
   player.indexInvestment -= take;
   player.cash += take;
   render();
 }
 function deposit() {
-  let amt = parseFloat(document.getElementById("bankAmount").value);
+  const amt = parseFloat(document.getElementById("bankAmount").value);
   if (amt > 0 && amt <= player.cash) {
     player.cash -= amt;
     bank.balance += amt;
@@ -129,50 +148,36 @@ function deposit() {
   }
 }
 function withdraw() {
-  let amt = parseFloat(document.getElementById("bankAmount").value);
-  let take = Math.min(amt, bank.balance);
+  const amt = parseFloat(document.getElementById("bankAmount").value);
+  const take = Math.min(amt, bank.balance);
   bank.balance -= take;
   player.cash += take;
   render();
 }
+
+// Index NAV = simple average of live prices
 function updateIndex() {
-  let avg = stocks.reduce((s, st) => s + st.price, 0) / stocks.length;
-  indexFund.nav = avg;
+  const priced = stocks.filter(s => typeof s.price === "number" && s.price > 0);
+  indexFund.nav = priced.length
+    ? priced.reduce((sum, s) => sum + s.price, 0) / priced.length
+    : 0;
 }
 
 function netWorth() {
   let nw = player.cash + bank.balance + player.indexInvestment;
-  for (let s of stocks) {
-    nw += (player.stockPositions[s.name] || 0) * s.price;
+  for (const s of stocks) {
+    nw += (player.stockPositions[s.name] || 0) * (s.price || 0);
   }
   return nw;
 }
 
 function nextMonth() {
   month++;
-  if (month >= 12) {
-    month = 0;
-    year++;
-    player.cash += 5000;
-  }
-
-  for (let s of stocks) {
-    let shock = gaussian() * s.vol;
-    s.price = Math.max(1, s.price * Math.exp(s.drift + shock));
-  }
-
-  bank.balance *= (1 + bank.rate / 12);
-
-  // index update
-  updateIndex();
-  // index investments grow
-  player.indexInvestment *= (1 + 0.005); // ~6% annualized
-
+  if (month >= 12) { month = 0; year++; player.cash += 5000; } // yearly paycheck
+  bank.balance *= (1 + bank.rate / 12);        // monthly interest
+  player.indexInvestment *= (1 + 0.005);       // ~6%/yr drift
   history.push({ t: year * 12 + month, value: netWorth() });
-
-  // report to server
-  socket.emit("updateNetWorth", netWorth());
-
+  if (socket) socket.emit("updateNetWorth", netWorth());
   render();
 }
 
@@ -180,17 +185,17 @@ function initGame() {
   year = 0; month = 0;
   player = { cash: 10000, stockPositions: {}, indexInvestment: 0 };
   bank = { balance: 0, rate: 0.02 };
-  stocks = [];
-  for (let i = 0; i < 5; i++) {
-    stocks.push({
-      name: "STK" + String.fromCharCode(65 + i),
-      price: rnd(50, 150),
-      drift: rnd(-0.01, 0.05),
-      vol: rnd(0.02, 0.1)
-    });
-  }
-  updateIndex();
+  stocks = TICKERS.map(sym => ({ name: sym, price: 0, currency: "USD" }));
+  indexFund = { nav: 0 };
   history = [];
-  progress = 0;
   render();
 }
+
+// expose for buttons in index.html
+window.joinGame = joinGame;
+window.buyStock = buyStock;
+window.sellStock = sellStock;
+window.investIndex = investIndex;
+window.sellIndex = sellIndex;
+window.deposit = deposit;
+window.withdraw = withdraw;
