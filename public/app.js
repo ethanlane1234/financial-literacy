@@ -82,8 +82,8 @@ function joinGame() {
 
   initGame();
 
-  // start timer → 1 month every 2s
-  setInterval(nextMonth, 2000);
+  // start timer → 1 month every 10s
+  setInterval(nextMonth, 10000);
 }
 
 function buyStock(name) {
