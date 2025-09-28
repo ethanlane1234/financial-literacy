@@ -19,6 +19,7 @@
   "homepage": "https://github.com/ethanlane1234/financial-literacy#readme",
   "dependencies": {
     "express": "^5.1.0",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "yahoo-finance2": "^2.13.3"
   }
 }
