@@ -1,141 +1,86 @@
 <!DOCTYPE html>
-
-
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Account Growth by Month</title>
+  <meta charset="UTF-8">
+  <title>Economic Game</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/socket.io/socket.io.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="/socket.io/socket.io.js"></script>  
-  <style>
-    body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }
-    .form { margin-bottom: 20px; }
-    label { display: block; margin-top: 10px; }
-    input { padding: 6px; width: 200px; }
-    button { margin-top: 15px; padding: 8px 14px; border:none; background:#4f46e5; color:#fff; border-radius:6px; cursor:pointer; }
-    canvas { background: #fff; border-radius: 10px; padding: 10px; }
-    
-  </style>
 </head>
-<body>
-  <h2>Account Growth Tracker</h2>
-  <!-- Info -->
+<body class="bg-gray-100 text-gray-900">
+  <div id="app" class="max-w-6xl mx-auto p-6">
+    <h1 class="text-3xl font-bold mb-4">Economic Game</h1>
+
+    <!-- Player setup -->
+    <div id="setup">
+      <input id="playerName" type="text" placeholder="Enter name"
+             class="border px-2 py-1">
+      <button onclick="joinGame()" class="px-3 py-1 bg-blue-500 text-white rounded">
+        Join Game
+      </button>
+    </div>
+
+    <!-- Game UI -->
+    <div id="game" class="hidden">
+      <div class="grid grid-cols-3 gap-6">
+        <!-- Info -->
         <div>
           <h2 class="text-xl font-semibold">Player Info</h2>
-          <p id="year">place</p>
-          <p id="month">place</p>
-          <p id="cash">place</p>
-          <p id="bank">place</p>
-          <p id="index">place</p>
-          <p id="networth">place</p>
+          <p id="year"></p>
+          <p id="month"></p>
+          <p id="cash"></p>
+          <p id="bank"></p>
+          <p id="index"></p>
+          <p id="networth"></p>
         </div>
-      <!-- Investments -->
+
+        <!-- Investments -->
         <div>
-          <h2>Investments</h2>
+          <h2 class="text-xl font-semibold">Investments</h2>
           <div id="stocks"></div>
 
-          <div>
-            <h3>Index Fund</h3>
-            <div>
-              <input id="indexAmount" type="number" placeholder="Amount $">
-              <button onclick="investIndex()">Invest</button>
-              <button onclick="sellIndex()">Sell</button>
-            </div>
-            <div>
-              <input id="Stock1" type="number" placeholder="Stock Amount">
-              <button onclick="investIndex()">Invest</button>
-              <button onclick="sellIndex()">Sell</button>
-            </div>
-            <div>
-              <input id="Stock2" type="number" placeholder="Stock Amount">
-              <button onclick="investIndex()">Invest</button>
-              <button onclick="sellIndex()">Sell</button>
+          <div class="mt-4">
+            <h3 class="text-lg font-semibold">Index Fund</h3>
+            <div class="flex space-x-2 mt-2">
+              <input id="indexAmount" type="number" placeholder="Amount $" class="border px-2 py-1">
+              <button onclick="investIndex()" class="px-2 py-1 bg-green-500 text-white rounded">Invest</button>
+              <button onclick="sellIndex()" class="px-2 py-1 bg-yellow-500 text-black rounded">Sell</button>
             </div>
           </div>
-  <div class="form">
 
+          <div class="mt-4">
+            <h3 class="text-lg font-semibold">Bank</h3>
+            <div class="flex space-x-2 mt-2">
+              <input id="bankAmount" type="number" placeholder="Amount $" class="border px-2 py-1">
+              <button onclick="deposit()" class="px-2 py-1 bg-green-500 text-white rounded">Deposit</button>
+              <button onclick="withdraw()" class="px-2 py-1 bg-yellow-500 text-black rounded">Withdraw</button>
+            </div>
+          </div>
+        </div>
 
-    
-    <input type="number" id="amount" placeholder="Dollar amount ($)">
+        <!-- Leaderboard -->
+        <div>
+          <h2 class="text-xl font-semibold">Leaderboard</h2>
+          <ul id="leaderboard" class="mt-2 space-y-1"></ul>
+        </div>
+      </div>
 
-    <button onclick="deposit()">deposit</button>
-    <button onclick="withdraw()">withdraw</button>
-    <button onclick="buy ()" >buy</button>
-    <button onclick="sell ()" >sell</button>
+      <!-- Progress Bar -->
+      <div class="mt-8">
+        <h2 class="text-xl font-semibold">Year Progress</h2>
+        <div class="w-full bg-gray-300 rounded h-6 mt-2">
+          <div id="progress" class="bg-blue-500 h-6 rounded"></div>
+        </div>
+      </div>
+
+      <!-- Net Worth Chart -->
+      <div class="mt-8">
+        <h2 class="text-xl font-semibold">Net Worth Over Time</h2>
+        <canvas id="chart"></canvas>
+      </div>
+    </div>
   </div>
 
-  <canvas id="growthChart" width="700" height="350"></canvas>
-
-  <script>
-    const months = [
-      "January","February","March","April","May","June",
-      "July","August","September","October","November","December"
-    ];
-
-    let currentIndex = 0; 
-    let chart;
-
-    const ctx = document.getElementById("growthChart").getContext("2d");
-
-    // Initialize chart
-    chart = new Chart(ctx, {
-      type: "line",
-      data: {
-        labels: [],
-        datasets: [{
-          label: "Dollar Amount ($)",
-          data: [],
-          borderColor: "#4f46e5",
-          backgroundColor: "rgba(79,70,229,0.1)",
-          tension: 0.3,
-          fill: true
-        }]
-      },
-      options: {
-        responsive: true,
-        scales: {
-          x: { title: { display: true, text: "Month" } },
-          y: { title: { display: true, text: "Amount ($)" }, beginAtZero: true }
-        }
-      }
-    });
-
-
-    function resetData() {
-      chart.data.labels = [];
-      chart.data.datasets[0].data = [];
-      chart.update();
-      currentIndex = 0;
-    }
-  </script>
-
-
-
-    <!-- Load Socket.IO client -->
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-      const socket = io();
-
-      const form = document.getElementById("form");
-      const input = document.getElementById("input");
-      const messages = document.getElementById("messages");
-
-      // Send message to server
-      form.addEventListener("submit", function(e) {
-        e.preventDefault();
-        if (input.value) {
-          socket.emit("chat message", input.value);
-          input.value = "";
-        }
-      });
-
-      // Receive message from server
-      socket.on("chat message", function(msg) {
-        const item = document.createElement("li");
-        item.textContent = msg;
-        messages.appendChild(item);
-        window.scrollTo(0, document.body.scrollHeight);
-      });
-    </script>
-
-
+  <script src="app.js"></script>
 </body>
+</html>
