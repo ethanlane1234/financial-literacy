@@ -90,6 +90,24 @@ function joinGame() {
     }
   });
 
+  // Market guess updates
+  socket.on('marketGuess', ({ state, score, medianPct }) => {
+    const el = document.getElementById('marketBanner');
+    let txt = `Market: ${state} (${medianPct}%)`;
+
+    // pick a background tint from score [-1..1]
+    const down = 'bg-red-600', up = 'bg-green-600', flat = 'bg-gray-600';
+    let cls = flat;
+    if (score <= -0.4) cls = 'bg-red-700';
+    else if (score < -0.1) cls = down;
+    else if (score >= 0.4) cls = 'bg-green-700';
+    else if (score > 0.1) cls = up;
+
+    el.className = `mb-3 p-3 rounded text-white ${cls}`;
+    el.textContent = txt;
+    el.classList.remove('hidden');
+  });
+
   // Subscribe to the tickers we care about
   socket.emit("subscribeTickers", TICKERS);
 
@@ -132,6 +150,7 @@ function investIndex() {
     render();
   }
 }
+
 function sellIndex() {
   const amt = parseFloat(document.getElementById("indexAmount").value);
   const take = Math.min(amt, player.indexInvestment);
@@ -139,6 +158,7 @@ function sellIndex() {
   player.cash += take;
   render();
 }
+
 function deposit() {
   const amt = parseFloat(document.getElementById("bankAmount").value);
   if (amt > 0 && amt <= player.cash) {
@@ -147,6 +167,7 @@ function deposit() {
     render();
   }
 }
+
 function withdraw() {
   const amt = parseFloat(document.getElementById("bankAmount").value);
   const take = Math.min(amt, bank.balance);
